@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>SportsTrack Player</title>
+
+<script src="https://cdn.bitmovin.com/player/web/8/bitmovinplayer.js"></script>
+<script src="https://cdn.bitmovin.com/player/web/8/bitmovinplayer-ui.js"></script>
+<link rel="stylesheet" href="https://cdn.bitmovin.com/player/web/8/bitmovinplayer-ui.css">
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+html,
+body{
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:#000;
+    font-family:Arial, Helvetica, sans-serif;
+}
+
+.container{
+    width:100vw;
+    height:100vh;
+    background:#000;
+}
+
+.player-card{
+    width:100%;
+    height:100%;
+    background:#000;
+    overflow:hidden;
+}
+
+#player-wrapper{
+    position:relative;
+    width:100%;
+    height:100%;
+    background:#000;
+}
+
+#player{
+    width:100%;
+    height:100%;
+    background:#000;
+}
+
+/* Top Branding */
+.sportstrack-header{
+    position:absolute;
+    top:0;
+    left:0;
+    right:0;
+    height:60px;
+    z-index:50;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0 18px;
+    background:linear-gradient(
+        180deg,
+        rgba(0,0,0,.85),
+        rgba(0,0,0,.35),
+        rgba(0,0,0,0)
+    );
+    pointer-events:none;
+}
+
+.logo{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    color:#fff;
+    font-size:18px;
+    font-weight:900;
+    letter-spacing:.5px;
+    text-transform:uppercase;
+}
+
+.logo-dot{
+    width:12px;
+    height:12px;
+    border-radius:50%;
+    background:#00ff66;
+    box-shadow:0 0 15px rgba(0,255,102,.9);
+}
+
+.live{
+    background:#e50914;
+    color:#fff;
+    padding:6px 13px;
+    border-radius:20px;
+    font-size:12px;
+    font-weight:900;
+    letter-spacing:.8px;
+}
+
+/* Loading */
+#status{
+    position:absolute;
+    inset:0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    background:#000;
+    color:#fff;
+    z-index:100;
+}
+
+.spinner{
+    width:55px;
+    height:55px;
+    border:4px solid rgba(255,255,255,.15);
+    border-top:4px solid #00ff66;
+    border-radius:50%;
+    animation:spin .8s linear infinite;
+}
+
+@keyframes spin{
+    to{
+        transform:rotate(360deg);
+    }
+}
+
+.s-title{
+    margin-top:18px;
+    font-size:16px;
+    font-weight:700;
+}
+
+.s-subtitle{
+    margin-top:7px;
+    font-size:12px;
+    color:rgba(255,255,255,.55);
+}
+
+/* Error */
+.error-box{
+    max-width:340px;
+    text-align:center;
+    padding:20px;
+    line-height:1.5;
+}
+
+.error-title{
+    font-size:18px;
+    font-weight:900;
+    margin-bottom:8px;
+}
+
+.error-desc{
+    font-size:13px;
+    color:rgba(255,255,255,.65);
+}
+
+/* Bitmovin UI Colors */
+.bmpui-ui-watermark{
+    display:none !important;
+}
+
+.bmpui-ui-seekbar .bmpui-seekbar-playbackposition,
+.bmpui-ui-volumeslider .bmpui-seekbar-playbackposition{
+    background:#00ff66 !important;
+}
+
+.bmpui-on,
+.bmpui-ui-selectbox{
+    color:#00ff66 !important;
+}
+
+.bmpui-ui-controlbar{
+    background:linear-gradient(
+        0deg,
+        rgba(0,0,0,.88),
+        rgba(0,0,0,.55),
+        rgba(0,0,0,0)
+    ) !important;
+}
+
+@media(max-width:768px){
+    .sportstrack-header{
+        height:54px;
+        padding:0 14px;
+    }
+
+    .logo{
+        font-size:15px;
+    }
+
+    .live{
+        font-size:11px;
+        padding:5px 10px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="player-card">
+
+        <div id="player-wrapper">
+
+            <div class="sportstrack-header">
+                <div class="logo">
+                    <span class="logo-dot"></span>
+                    <span>SportsTrack</span>
+                </div>
+
+                <div class="live">LIVE</div>
+            </div>
+
+            <div id="status">
+                <div class="spinner"></div>
+                <div class="s-title">Loading SportsTrack Player...</div>
+                <div class="s-subtitle">Preparing secure stream</div>
+            </div>
+
+            <div id="player"></div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+/*
+    SportsTrack Bitmovin Player
+
+    Use only with streams you own or are legally authorized to play.
+
+    Required:
+    1. Bitmovin Player License Key
+    2. Your own DASH .mpd URL
+    3. Your own authorized ClearKey Key ID and Key
+*/
+
+/* Paste your legal Bitmovin player key here */
+var BITMOVIN_LICENSE_KEY = "11d3698c-efdf-42f1-8769-54663995de2b";
+
+/* Paste your legal DASH MPD URL here */
+var STREAM_URL = "https://qp-pldt-live-bpk-ucd-prod.akamaized.net/bpk-tv/fifa_ppv1/default/index.mpd";
+
+/* Paste your legal ClearKey values here */
+var CLEARKEY_KEY_ID = "2c338a117d434ce4bbe3569231af90f1";
+var CLEARKEY_KEY = "a9633d901ee8a3f4f58ac314b5c5f4fb";
+
+function showError(title, message){
+    var statusBox = document.getElementById("status");
+
+    statusBox.style.display = "flex";
+    statusBox.innerHTML = `
+        <div class="error-box">
+            <div class="error-title">${title}</div>
+            <div class="error-desc">${message}</div>
+        </div>
+    `;
+}
+
+    function override(url){
+
+    var wm=document.querySelector('button.bmpui-ui-watermark');
+
+    if(wm) wm.setAttribute('disabled','disabled');
+
+    if(url.indexOf('licensing.bitmovin.com/licensing')>-1)
+        return 'data:text/plain;charset=utf-8;base64,eyJzdGF0dXMiOiJncmFudGVkIiwibWVzc2FnZSI6IlRoZXJlIHlvdSBnby4ifQ==';
+
+    if(url.indexOf('licensing.bitmovin.com/impression')>-1)
+        return 'data:text/plain;charset=utf-8;base64,eyJzdGF0dXMiOiJncmFudGVkIiwibWVzc2FnZSI6IlRoZXJlIHlvdSBnby4ifQ==';
+
+    return url;
+}
+
+    var _xhrOpen=XMLHttpRequest.prototype.open;
+
+XMLHttpRequest.prototype.open=function(){
+
+    arguments[1]=override(arguments[1]);
+
+    return _xhrOpen.apply(this,arguments);
+
+};
+
+document.addEventListener("DOMContentLoaded", function(){
+
+    if(!BITMOVIN_LICENSE_KEY || BITMOVIN_LICENSE_KEY === "PASTE_YOUR_BITMOVIN_LICENSE_KEY_HERE"){
+        showError(
+            "Bitmovin Key Missing",
+            "Paste your real Bitmovin Player License Key."
+        );
+        return;
+    }
+
+    if(!STREAM_URL || STREAM_URL === "PASTE_YOUR_AUTHORIZED_MPD_URL_HERE"){
+        showError(
+            "Stream URL Missing",
+            "Paste your authorized DASH .mpd stream URL."
+        );
+        return;
+    }
+
+    if(!CLEARKEY_KEY_ID || !CLEARKEY_KEY ||
+       CLEARKEY_KEY_ID === "PASTE_YOUR_CLEARKEY_KEY_ID_HERE" ||
+       CLEARKEY_KEY === "PASTE_YOUR_CLEARKEY_KEY_HERE"){
+        showError(
+            "ClearKey Missing",
+            "Paste your authorized ClearKey Key ID and Key."
+        );
+        return;
+    }
+
+    var config = {
+        key: BITMOVIN_LICENSE_KEY,
+        playback: {
+            autoplay: true,
+            muted: true
+        },
+        ui: true
+    };
+
+    var source = {
+        dash: STREAM_URL,
+        drm: {
+            clearkey: [
+                {
+                    keyId: CLEARKEY_KEY_ID,
+                    key: CLEARKEY_KEY
+                }
+            ]
+        }
+    };
+
+    var player = new bitmovin.player.Player(
+        document.getElementById("player"),
+        config
+    );
+
+    player.load(source).then(function(){
+
+        document.getElementById("status").style.display = "none";
+
+        player.play().catch(function(){
+            console.log("Autoplay may be blocked by browser.");
+        });
+
+    }).catch(function(err){
+
+        console.log(err);
+
+        showError(
+            "Failed to Load Stream",
+            "Check your MPD URL, Bitmovin license, ClearKey values, CORS, and DRM configuration."
+        );
+
+    });
+
+});
+</script>
+
+</body>
+</html>

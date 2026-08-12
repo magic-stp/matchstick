@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>ST Player New (P2P Mesh Protected)</title>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shaka-player@4.14.10/dist/controls.min.css">
+<script src="https://cdn.jsdelivr.net/npm/shaka-player@4.14.10/dist/shaka-player.ui.min.js"></script>
+<script type="importmap">
+  {
+    "imports": {
+      "p2p-media-loader-core": "https://cdn.jsdelivr.net/npm/p2p-media-loader-core@^2/dist/p2p-media-loader-core.es.min.js",
+      "p2p-media-loader-shaka": "https://cdn.jsdelivr.net/npm/p2p-media-loader-shaka@^2/dist/p2p-media-loader-shaka.es.min.js"
+    }
+  }
+</script>
+
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+
+<style>
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
+
+html,
+body{
+  width:100%;
+  height:100%;
+  background:#000;
+  overflow:hidden;
+  font-family:Arial,Helvetica,sans-serif;
+}
+
+.st-player-shell{
+  width:100vw;
+  height:100vh;
+  background:#000;
+  position:relative;
+}
+
+.st-header{
+  position:absolute;
+  top:0;
+  left:0;
+  right:0;
+  height:56px;
+  z-index:20;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 16px;
+  background:linear-gradient(to bottom,rgba(0,0,0,.8),rgba(0,0,0,0));
+  pointer-events:none;
+}
+
+.st-logo{
+  color:#fff;
+  font-size:20px;
+  font-weight:800;
+}
+
+.st-live{
+  color:#fff;
+  background:#e50914;
+  padding:6px 14px;
+  border-radius:22px;
+  font-size:13px;
+  font-weight:800;
+}
+
+#video-container{
+  width:100%;
+  height:100%;
+  position:relative;
+  background:#000;
+}
+
+video{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  background:#000;
+}
+
+.st-loader{
+  position:absolute;
+  inset:0;
+  z-index:10;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  gap:12px;
+  color:#fff;
+  background:#000;
+}
+
+.st-spinner{
+  width:42px;
+  height:42px;
+  border:4px solid rgba(255,255,255,.25);
+  border-top-color:#f1ff00;
+  border-radius:50%;
+  animation:stSpin 1s linear infinite;
+}
+
+@keyframes stSpin{
+  to{
+    transform:rotate(360deg);
+  }
+}
+
+.st-error{
+  display:none;
+  position:absolute;
+  inset:0;
+  z-index:30;
+  background:#000;
+  color:#fff;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  padding:20px;
+}
+
+.st-error h2{
+  color:#f1ff00;
+  margin-bottom:8px;
+}
+
+.shaka-video-container{
+  width:100%!important;
+  height:100%!important;
+  background:#000!important;
+}
+
+.shaka-spinner-container,
+.shaka-spinner,
+.shaka-spinner-svg,
+.shaka-spinner-path{
+  display:none!important;
+  opacity:0!important;
+  visibility:hidden!important;
+}
+
+.shaka-play-button-container,
+.shaka-play-button{
+  display:none!important;
+  opacity:0!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+}
+
+.shaka-controls-container{
+  background:transparent!important;
+}
+
+.shaka-controls-container[shown="true"]{
+  background:transparent!important;
+}
+
+.shaka-bottom-controls{
+  background:transparent!important;
+  padding:0 22px 18px!important;
+}
+
+.material-icons,
+.material-icons-round{
+  color:#f1ff00!important;
+}
+
+.shaka-current-time,
+.shaka-duration,
+.shaka-time-container{
+  color:#fff!important;
+  font-size:15px!important;
+}
+
+.shaka-seek-bar-container{
+  height:5px!important;
+}
+
+.shaka-seek-bar{
+  height:5px!important;
+  border-radius:10px!important;
+}
+
+.shaka-volume-bar-container{
+  height:5px!important;
+}
+
+.shaka-overflow-menu,
+.shaka-settings-menu{
+  background:#111!important;
+  color:#fff!important;
+  border-radius:12px!important;
+}
+
+.shaka-overflow-menu button,
+.shaka-settings-menu button{
+  color:#fff!important;
+}
+
+@media(max-width:768px){
+  .st-header{
+    height:50px;
+    padding:0 14px;
+  }
+  .st-logo{
+    font-size:18px;
+  }
+  .st-live{
+    font-size:12px;
+    padding:5px 12px;
+  }
+  .shaka-bottom-controls{
+    padding:0 18px 14px!important;
+  }
+  .shaka-controls-button-panel button{
+    width:38px!important;
+    height:38px!important;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="st-player-shell">
+  <div class="st-header">
+    <div class="st-logo">ST Player</div>
+    <div class="st-live">LIVE</div>
+  </div>
+
+  <div id="video-container" data-shaka-player-container>
+    <video
+      id="video"
+      autoplay
+      muted
+      playsinline
+      data-shaka-player
+      poster="/img/tv-static.gif">
+    </video>
+
+    <div class="st-loader" id="stLoader">
+      <div class="st-spinner"></div>
+      <div>Loading ST Player...</div>
+    </div>
+
+    <div class="st-error" id="stError">
+      <div>
+        <h2>Playback Error</h2>
+        <p id="errorText">Unable to load this stream. Please try again later.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+// Import the v2 Shaka Engine
+import { ShakaP2PEngine } from "p2p-media-loader-shaka";
+
+  // Initialize P2P Swarm Logic (v2 API)
+  const p2pEngine = new ShakaP2PEngine({
+    core: { swarmId: "st-player-live-mesh-v1" }
+  });
+
+  // --- ADD THESE LOGS FOR TESTING ---
+  
+
+const manifestUri = "https://otte.cache.aiv-cdn.net/bom-nitro/live/clients/enc/ajfoeddkbz/out/v1/b78800b9b2304879b15843f455836829/cenc.mpd";
+const ec2BackupUri = ""; 
+
+const clearKeys = {
+  "f6564ec2aee819046328a0e153be574d": "ff46a8a1031eb27ef22576a077c98ab7"
+};
+let playerReady = false;
+let errorTimer = null;
+
+// Register the P2P networking plugins globally to Shaka
+ShakaP2PEngine.registerPlugins(window.shaka);
+
+async function init(){
+  const video = document.getElementById("video");
+  const loader = document.getElementById("stLoader");
+  const errorBox = document.getElementById("stError");
+  const errorText = document.getElementById("errorText");
+
+  const ui = video.ui;
+  const controls = ui.getControls();
+  const player = controls.getPlayer();
+
+  window.player = player;
+  window.ui = ui;
+
+  ui.configure({
+    controlPanelElements:[
+      "play_pause", "time_and_duration", "spacer", "mute", "volume", "fullscreen", "overflow_menu"
+    ],
+    overflowMenuButtons:["quality", "language", "captions", "playback_rate"],
+    seekBarColors:{
+      base:"rgba(255,255,255,.25)", buffered:"rgba(255,255,255,.45)", played:"rgb(241,255,0)"
+    }
+  });
+
+  player.configure({
+    streaming:{
+      retryParameters: { maxAttempts:5, baseDelay:1000, backoffFactor:2, fuzzFactor:0.5, timeout:15000 },
+      bufferingGoal:20, rebufferingGoal:4, lowLatencyMode:false
+    },
+    drm:{
+      retryParameters: { maxAttempts:5, baseDelay:1000, backoffFactor:2, timeout:15000 },
+      clearKeys: clearKeys
+    }
+  });
+
+  // Initialize P2P Swarm Logic (v2 API)
+  const p2pEngine = new ShakaP2PEngine({
+    core: {
+      swarmId: "st-player-live-mesh-v1",
+      cachedSegmentExpiration: 86400000,
+      cachedSegmentsCount: 1000,
+      httpRequestSetup: (request) => {
+         // This ensures standard headers are passed properly to the CDN when fetching segments
+         return request;
+      }
+    }
+  });
+
+  p2pEngine.addEventListener('onChunkDownloaded', (bytesLength, downloadType) => {
+      if (downloadType === 'p2p') {
+          console.log(`🟢 P2P SUCCESS: Downloaded chunk from a peer!`);
+      } else if (downloadType === 'http') {
+          console.log(`🟡 CDN/EC2: Downloaded chunk from server.`);
+      }
+  });
+
+  p2pEngine.addEventListener('onPeerConnect', (peer) => {
+      console.log(`🚀 SWARM: New user joined your mesh network!`);
+  });
+  // ----------------------------------
+
+
+  // Bind the WebRTC engine directly to your Shaka instance
+  p2pEngine.bindShakaPlayer(player);
+
+  player.addEventListener("error", function(event){ handleError(event.detail); });
+  controls.addEventListener("error", function(event){ handleError(event.detail); });
+
+  video.addEventListener("waiting", function(){
+    if(!playerReady) loader.style.display = "flex";
+  });
+
+  video.addEventListener("playing", function(){
+    playerReady = true;
+    loader.style.display = "none";
+    errorBox.style.display = "none";
+    clearTimeout(errorTimer);
+  });
+
+  try{
+    loader.style.display = "flex";
+    errorBox.style.display = "none";
+
+    await player.load(manifestUri);
+    playerReady = true;
+    loader.style.display = "none";
+
+    try{ await video.play(); } catch(e){ console.log("Autoplay blocked:", e); }
+    console.log("ST Player loaded with P2P Mesh Enabled");
+    
+  }catch(error){
+    handleError(error);
+  }
+
+  function handleError(error){
+    console.log("Shaka error:", error);
+    clearTimeout(errorTimer);
+
+    errorTimer = setTimeout(async function(){
+      if(!playerReady || video.readyState === 0){
+        if(ec2BackupUri && player.getAssetUri() !== ec2BackupUri) {
+             console.log("Swapping stream context to EC2 proxy seed tunnel...");
+             try {
+                 loader.style.display = "flex";
+                 errorBox.style.display = "none";
+                 await player.load(ec2BackupUri);
+                 await video.play();
+                 return;
+             } catch(e) { console.error("EC2 proxy seed failure:", e); }
+        }
+        
+        loader.style.display = "none";
+        errorBox.style.display = "flex";
+        if(error && error.code === 1001) {
+            errorText.innerHTML = "Network block detected. If using Jio, please connect via an alternative provider or enable a public DNS.";
+        }
+      }
+    }, 5000);
+  }
+}
+
+function initFailed(event){
+  console.error("Shaka UI failed:", event);
+  document.getElementById("stLoader").style.display = "none";
+  document.getElementById("stError").style.display = "flex";
+}
+
+document.addEventListener("shaka-ui-loaded", init);
+document.addEventListener("shaka-ui-load-failed", initFailed);
+</script>
+
+</body>
+</html>

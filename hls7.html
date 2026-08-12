@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1"
+  >
+<meta name="referrer" content="strict-origin-when-cross-origin">
+
+  <title>ST Player</title>
+
+  <link
+    rel="stylesheet"
+    href="https://cdn.plyr.io/3.6.2/plyr.css"
+  >
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;600;700&display=swap"
+    rel="stylesheet"
+  >
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      background: #000;
+      overflow: hidden;
+    }
+
+    body {
+      font-family: "Rajdhani", sans-serif;
+    }
+
+    .player-wrap {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      background:
+        radial-gradient(
+          circle at center,
+          rgba(0, 255, 132, 0.08),
+          transparent 45%
+        ),
+        linear-gradient(
+          135deg,
+          #020805 0%,
+          #000000 70%
+        );
+    }
+
+    .player-wrap video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #000;
+    }
+
+    .plyr {
+      width: 100%;
+      height: 100%;
+
+      --plyr-color-main: #00ff84;
+      --plyr-video-control-color: #ffffff;
+      --plyr-video-control-color-hover: #031008;
+      --plyr-video-control-background-hover: #00ff84;
+      --plyr-range-fill-background: #00ff84;
+      --plyr-control-radius: 10px;
+
+      font-family: "Rajdhani", sans-serif;
+    }
+
+    .plyr__video-wrapper {
+      width: 100%;
+      height: 100%;
+      background: #000;
+    }
+
+    .plyr--video .plyr__controls {
+      background: linear-gradient(
+        to top,
+        rgba(0, 0, 0, 0.92),
+        rgba(0, 0, 0, 0.55),
+        transparent
+      ) !important;
+    }
+
+    .plyr--video .plyr__control--overlaid {
+      left: 50% !important;
+      top: 50% !important;
+
+      transform: translate(-50%, -50%) !important;
+
+      background: rgba(0, 255, 132, 0.92) !important;
+      color: #031008 !important;
+
+      box-shadow:
+        0 0 30px rgba(0, 255, 132, 0.45);
+    }
+
+    .plyr__control:hover {
+      background: #00ff84 !important;
+      color: #031008 !important;
+    }
+
+    .plyr__menu__container {
+      background: #06120c !important;
+
+      border:
+        1px solid rgba(0, 255, 132, 0.25) !important;
+
+      color: #fff !important;
+
+      box-shadow:
+        0 14px 40px rgba(0, 0, 0, 0.6);
+    }
+
+    .plyr__menu__container .plyr__control {
+      color: #fff !important;
+    }
+
+    .plyr__menu__container .plyr__control:hover {
+      color: #031008 !important;
+    }
+
+    /* SportsTrack watermark */
+
+    #hx-watermark {
+      position: absolute;
+
+      left: 50%;
+      bottom: 62px;
+
+      transform: translateX(-50%);
+
+      z-index: 5;
+
+      display: flex;
+      align-items: center;
+
+      gap: 8px;
+
+      opacity: 0.42;
+
+      pointer-events: none;
+
+      transition:
+        opacity 0.3s,
+        bottom 0.3s;
+
+      font-family: "Rajdhani", sans-serif;
+      text-align: center;
+    }
+
+    #hx-watermark .wm-rule {
+      width: 22px;
+      height: 1px;
+
+      background:
+        linear-gradient(
+          90deg,
+          transparent,
+          #00ff84
+        );
+    }
+
+    #hx-watermark .wm-rule.right {
+      background:
+        linear-gradient(
+          90deg,
+          #00ff84,
+          transparent
+        );
+    }
+
+    #hx-watermark .wm-text {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #hx-watermark .wm-name {
+      font-family: "Bebas Neue", sans-serif;
+
+      font-size: 15px;
+      letter-spacing: 4px;
+
+      color: #fff;
+
+      text-shadow:
+        0 0 14px rgba(0, 255, 132, 0.35);
+    }
+
+    #hx-watermark .wm-name .r {
+      color: #00ff84;
+    }
+
+    #hx-watermark .wm-url {
+      margin-top: 2px;
+
+      font-size: 9px;
+      letter-spacing: 3px;
+
+      color: #b8c9c1;
+    }
+
+    .plyr:fullscreen #hx-watermark,
+    .plyr:-webkit-full-screen #hx-watermark {
+      bottom: 70px;
+      opacity: 0.5;
+    }
+
+    /* Loading screen */
+
+    .status-screen {
+      position: absolute;
+
+      inset: 0;
+
+      z-index: 50;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      padding: 25px;
+
+      background:
+        radial-gradient(
+          circle at center,
+          rgba(0, 255, 132, 0.08),
+          transparent 45%
+        ),
+        #000;
+
+      color: #fff;
+      text-align: center;
+    }
+
+    .status-card {
+      width: min(500px, 100%);
+
+      padding: 28px;
+
+      border:
+        1px solid rgba(0, 255, 132, 0.22);
+
+      border-radius: 16px;
+
+      background:
+        rgba(5, 18, 11, 0.9);
+
+      box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.6);
+    }
+
+    .status-spinner {
+      width: 42px;
+      height: 42px;
+
+      margin:
+        0 auto 18px;
+
+      border:
+        3px solid rgba(255, 255, 255, 0.16);
+
+      border-top-color: #00ff84;
+
+      border-radius: 50%;
+
+      animation:
+        status-spin 0.8s linear infinite;
+    }
+
+    @keyframes status-spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .status-title {
+      font-size: 23px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .status-message {
+      margin-top: 8px;
+
+      font-size: 15px;
+      line-height: 1.5;
+
+      color: #b8c9c1;
+    }
+
+    .status-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+
+      min-height: 43px;
+
+      margin-top: 18px;
+      padding: 10px 20px;
+
+      border: 0;
+      border-radius: 9px;
+
+      background: #00ff84;
+      color: #031008;
+
+      font-family: "Rajdhani", sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .status-button:hover {
+      background: #31ff9e;
+    }
+
+    @media (max-width: 600px) {
+      #hx-watermark {
+        bottom: 58px;
+        gap: 7px;
+      }
+
+      #hx-watermark .wm-name {
+        font-size: 13px;
+        letter-spacing: 3px;
+      }
+
+      #hx-watermark .wm-url {
+        font-size: 8px;
+        letter-spacing: 2px;
+      }
+
+      #hx-watermark .wm-rule {
+        width: 16px;
+      }
+
+      .status-card {
+        padding: 22px;
+      }
+
+      .status-title {
+        font-size: 20px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="player-wrap" id="playerWrap">
+
+    <video
+      id="player"
+      controls
+      playsinline
+      webkit-playsinline
+      preload="metadata">
+    </video>
+
+    <div class="status-screen" id="statusScreen">
+      <div class="status-card">
+        <div class="status-spinner" id="statusSpinner"></div>
+
+        <div class="status-title" id="statusTitle">
+          Loading stream
+        </div>
+
+        <div class="status-message" id="statusMessage">
+          Connecting to the video source...
+        </div>
+
+        <a
+          class="status-button"
+          id="statusButton"
+          href="#"
+          target="_blank"
+          rel="noopener noreferrer"
+          style="display:none">
+          Open stream directly
+        </a>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+  <script src="https://cdn.plyr.io/3.6.2/plyr.polyfilled.js"></script>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const video = document.getElementById("player");
+      const playerWrap = document.getElementById("playerWrap");
+
+      const statusScreen =
+        document.getElementById("statusScreen");
+
+      const statusSpinner =
+        document.getElementById("statusSpinner");
+
+      const statusTitle =
+        document.getElementById("statusTitle");
+
+      const statusMessage =
+        document.getElementById("statusMessage");
+
+      const statusButton =
+        document.getElementById("statusButton");
+
+      const params =
+        new URLSearchParams(window.location.search);
+
+      const videoURL = params.get("x");
+
+      let player = null;
+      let hls = null;
+      let playerCreated = false;
+
+      function hideStatus() {
+        statusScreen.style.display = "none";
+      }
+
+      function showLoading(title, message) {
+        statusScreen.style.display = "flex";
+        statusSpinner.style.display = "block";
+        statusButton.style.display = "none";
+
+        statusTitle.textContent =
+          title || "Loading stream";
+
+        statusMessage.textContent =
+          message || "Connecting to the video source...";
+      }
+
+      function showError(title, message, showOpenButton) {
+        statusScreen.style.display = "flex";
+        statusSpinner.style.display = "none";
+
+        statusTitle.textContent =
+          title || "Playback unavailable";
+
+        statusMessage.textContent =
+          message || "The video could not be played.";
+
+        if (showOpenButton && videoURL) {
+          statusButton.href = videoURL;
+          statusButton.style.display = "inline-flex";
+        } else {
+          statusButton.style.display = "none";
+        }
+      }
+
+      function addWatermark() {
+        if (!player || !player.elements) {
+          return;
+        }
+
+        if (!player.elements.container) {
+          return;
+        }
+
+        if (
+          player.elements.container.querySelector(
+            "#hx-watermark"
+          )
+        ) {
+          return;
+        }
+
+        const watermark =
+          document.createElement("div");
+
+        watermark.id = "hx-watermark";
+
+        watermark.innerHTML =
+          '<span class="wm-rule"></span>' +
+          '<span class="wm-text">' +
+            '<span class="wm-name">' +
+              'SPORTS<span class="r">TRACK</span>' +
+            '</span>' +
+            '<span class="wm-url"></span>' +
+          '</span>' +
+          '<span class="wm-rule right"></span>';
+
+        player.elements.container.appendChild(
+          watermark
+        );
+      }
+
+      function setLandscapeFullscreen() {
+        const fullscreenElement =
+          document.fullscreenElement ||
+          document.webkitFullscreenElement;
+
+        if (fullscreenElement) {
+          if (
+            screen.orientation &&
+            typeof screen.orientation.lock === "function"
+          ) {
+            screen.orientation
+              .lock("landscape")
+              .catch(function () {});
+          }
+        } else {
+          if (
+            screen.orientation &&
+            typeof screen.orientation.unlock === "function"
+          ) {
+            try {
+              screen.orientation.unlock();
+            } catch (error) {
+              // Some browsers do not permit unlocking.
+            }
+          }
+        }
+      }
+
+      document.addEventListener(
+        "fullscreenchange",
+        setLandscapeFullscreen
+      );
+
+      document.addEventListener(
+        "webkitfullscreenchange",
+        setLandscapeFullscreen
+      );
+
+      function createPlayer(options) {
+        if (playerCreated) {
+          return player;
+        }
+
+        const defaultOptions = {
+          controls: [
+            "play-large",
+            "play",
+            "progress",
+            "current-time",
+            "mute",
+            "volume",
+            "settings",
+            "pip",
+            "fullscreen"
+          ],
+
+          settings: [
+            "speed"
+          ],
+
+          fullscreen: {
+            enabled: true,
+            fallback: true,
+            iosNative: true
+          },
+
+          ratio: null,
+
+          keyboard: {
+            focused: true,
+            global: true
+          }
+        };
+
+        player = new Plyr(
+          video,
+          Object.assign(
+            {},
+            defaultOptions,
+            options || {}
+          )
+        );
+
+        playerCreated = true;
+
+        addWatermark();
+
+        player.on("ready", function () {
+          hideStatus();
+        });
+
+        player.on("playing", function () {
+          hideStatus();
+        });
+
+        video.addEventListener(
+          "click",
+          function (event) {
+            /*
+             * Do not toggle playback when the user clicks a
+             * Plyr control.
+             */
+            if (
+              event.target.closest &&
+              event.target.closest(".plyr__controls")
+            ) {
+              return;
+            }
+
+            if (!player) {
+              return;
+            }
+
+            if (player.playing) {
+              player.pause();
+            } else {
+              const playPromise = player.play();
+
+              if (
+                playPromise &&
+                typeof playPromise.catch === "function"
+              ) {
+                playPromise.catch(function () {});
+              }
+            }
+          }
+        );
+
+        return player;
+      }
+
+      function getNativeHlsSupport() {
+        const appleType =
+          video.canPlayType(
+            "application/vnd.apple.mpegurl"
+          );
+
+        const alternateType =
+          video.canPlayType(
+            "application/x-mpegURL"
+          );
+
+        return Boolean(
+          appleType ||
+          alternateType
+        );
+      }
+
+      function startNativePlayback() {
+        console.log(
+          "ST Player: using native HLS playback"
+        );
+
+        showLoading(
+          "Loading stream",
+          "Using native browser playback..."
+        );
+
+        video.src = videoURL;
+
+        createPlayer({
+          settings: [
+            "speed"
+          ]
+        });
+
+        video.addEventListener(
+          "loadedmetadata",
+          function () {
+            hideStatus();
+          },
+          {
+            once: true
+          }
+        );
+
+        video.addEventListener(
+          "canplay",
+          function () {
+            hideStatus();
+          },
+          {
+            once: true
+          }
+        );
+
+        video.addEventListener(
+          "error",
+          function () {
+            const errorCode =
+              video.error ?
+                video.error.code :
+                "unknown";
+
+            console.error(
+              "Native HLS playback error:",
+              errorCode,
+              video.error
+            );
+
+            showError(
+              "Native playback failed",
+              "This browser recognised HLS, but could not play this stream.",
+              true
+            );
+          }
+        );
+
+        video.load();
+      }
+
+      function getQualities() {
+        const qualities = [];
+
+        hls.levels.forEach(function (level) {
+          const height = Number(level.height);
+
+          if (
+            height > 0 &&
+            !qualities.includes(height)
+          ) {
+            qualities.push(height);
+          }
+        });
+
+        qualities.sort(function (a, b) {
+          return b - a;
+        });
+
+        return qualities;
+      }
+
+      function changeQuality(quality) {
+        if (!hls) {
+          return;
+        }
+
+        /*
+         * 0 means Hls.js automatic adaptive quality.
+         */
+        if (Number(quality) === 0) {
+          hls.currentLevel = -1;
+          hls.nextLevel = -1;
+          return;
+        }
+
+        const requestedQuality =
+          Number(quality);
+
+        const levelIndex =
+          hls.levels.findIndex(function (level) {
+            return (
+              Number(level.height) ===
+              requestedQuality
+            );
+          });
+
+        if (levelIndex !== -1) {
+          hls.currentLevel = levelIndex;
+        }
+      }
+
+      function startHlsJsPlayback() {
+        console.log(
+          "ST Player: using Hls.js playback"
+        );
+
+        showLoading(
+          "Loading stream",
+          "Connecting through Hls.js..."
+        );
+
+        hls = new Hls({
+      
+          enableWorker: true,
+
+          lowLatencyMode: true,
+
+          backBufferLength: 30,
+
+          maxBufferLength: 30,
+
+          manifestLoadingTimeOut: 15000,
+
+          levelLoadingTimeOut: 15000,
+
+          fragLoadingTimeOut: 20000,
+          
+  xhrSetup: function (xhr, url) {
+    // Allow TwitCasting session cookies to be received and sent
+    xhr.withCredentials = true;
+  }
+        });
+
+        hls.attachMedia(video);
+
+        hls.on(
+          Hls.Events.MEDIA_ATTACHED,
+          function () {
+            hls.loadSource(videoURL);
+          }
+        );
+
+        hls.on(
+          Hls.Events.MANIFEST_PARSED,
+          function () {
+            const qualities =
+              getQualities();
+
+            const qualityOptions =
+              [0].concat(qualities);
+
+            createPlayer({
+              settings:
+                qualities.length > 0
+                  ? ["quality", "speed"]
+                  : ["speed"],
+
+              quality: {
+                default: 0,
+
+                options: qualityOptions,
+
+                forced: true,
+
+                onChange: changeQuality
+              },
+
+              i18n: {
+                qualityLabel: {
+                  0: "Auto"
+                }
+              }
+            });
+
+            hideStatus();
+          }
+        );
+
+        hls.on(
+          Hls.Events.LEVEL_SWITCHED,
+          function (event, data) {
+            if (!player) {
+              return;
+            }
+
+            const level =
+              hls.levels[data.level];
+
+            if (level && level.height) {
+              console.log(
+                "Current HLS quality:",
+                level.height + "p"
+              );
+            }
+          }
+        );
+
+        hls.on(
+          Hls.Events.ERROR,
+          function (event, data) {
+            console.error(
+              "Hls.js error:",
+              data
+            );
+
+            if (!data.fatal) {
+              return;
+            }
+
+            if (
+              data.type ===
+              Hls.ErrorTypes.NETWORK_ERROR
+            ) {
+              /*
+               * A missing Access-Control-Allow-Origin
+               * usually appears here as a network error.
+               */
+              showError(
+                "Stream blocked by the browser",
+                "The source server does not provide CORS permission for Hls.js. The same stream may still work when opened directly or in MX Player.",
+                true
+              );
+
+              hls.destroy();
+              hls = null;
+              return;
+            }
+
+            if (
+              data.type ===
+              Hls.ErrorTypes.MEDIA_ERROR
+            ) {
+              try {
+                hls.recoverMediaError();
+              } catch (error) {
+                showError(
+                  "Media playback error",
+                  "The stream format could not be decoded by this browser.",
+                  true
+                );
+              }
+
+              return;
+            }
+
+            showError(
+              "Playback failed",
+              "The browser could not load this HLS stream.",
+              true
+            );
+
+            hls.destroy();
+            hls = null;
+          }
+        );
+      }
+
+      if (!videoURL) {
+        showError(
+          "Stream URL missing",
+          "Add the stream URL using ?x= followed by the encoded HLS URL.",
+          false
+        );
+
+        return;
+      }
+
+      /*
+       * Playback order:
+       *
+       * 1. Native HLS when the browser reports support.
+       * 2. Hls.js when Media Source Extensions are available.
+       * 3. Show unsupported-browser message.
+       */
+
+      if (getNativeHlsSupport()) {
+        startNativePlayback();
+        return;
+      }
+
+      if (
+        window.Hls &&
+        Hls.isSupported()
+      ) {
+        startHlsJsPlayback();
+        return;
+      }
+
+      showError(
+        "HLS is not supported",
+        "This browser does not provide native HLS or Hls.js playback support.",
+        true
+      );
+
+      window.addEventListener(
+        "beforeunload",
+        function () {
+          if (hls) {
+            hls.destroy();
+          }
+
+          if (player) {
+            player.destroy();
+          }
+        }
+      );
+    })();
+  </script>
+
+</body>
+</html>
