@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="referrer" content="no-referrer">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>SportsTrack Player</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/shaka-player@4.16.2/dist/shaka-player.ui.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shaka-player@4.16.2/dist/controls.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; background: #000; overflow: hidden; font-family: 'Rajdhani', system-ui, sans-serif; }
+    .shaka-video-container {
+      position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+      background: radial-gradient(circle at center, rgba(0,255,132,.08), transparent 45%),
+                  linear-gradient(135deg, #020805 0%, #000 72%);
+    }
+    video { width: 100%; height: 100%; object-fit: contain; background: #000; }
+    .shaka-spinner-container { display: none !important; }
+    .shaka-controls-container { font-family: 'Rajdhani', sans-serif !important; }
+    .shaka-bottom-controls {
+      background: linear-gradient(to top, rgba(0,0,0,.94), rgba(0,0,0,.62), transparent) !important;
+    }
+    .shaka-controls-button-panel button,
+    .shaka-overflow-menu button,
+    .shaka-settings-menu button { color: white !important; }
+    .shaka-controls-button-panel button:hover,
+    .shaka-overflow-menu button:hover,
+    .shaka-settings-menu button:hover { color: #00ff84 !important; }
+    .shaka-seek-bar-container { border-radius: 999px !important; overflow: hidden !important; }
+    .shaka-overflow-menu, .shaka-settings-menu {
+      background: rgba(3,18,10,.96) !important;
+      border: 1px solid rgba(0,255,132,.25) !important;
+      box-shadow: 0 12px 38px rgba(0,0,0,.65) !important;
+      color: #fff !important;
+    }
+
+    /* SportsTrack watermark */
+    #wm {
+      position: absolute; bottom: 70px; left: 50%; transform: translateX(-50%);
+      z-index: 100; pointer-events: none; user-select: none;
+      display: flex; align-items: center; gap: 9px;
+      opacity: .55; transition: opacity .5s, bottom .3s;
+    }
+    .wm-rule { width: 22px; height: 1px; background: linear-gradient(90deg, transparent, rgba(0,255,132,.95)); }
+    .wm-rule.r { background: linear-gradient(90deg, rgba(0,255,132,.95), transparent); }
+    .wm-inner { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+    .wm-name {
+      font-family: 'Bebas Neue', sans-serif; font-size: 17px; letter-spacing: 4px;
+      line-height: 1; color: #fff; white-space: nowrap;
+      text-shadow: 0 1px 8px #000, 0 0 24px rgba(0,255,132,.25);
+    }
+    .wm-name .r { color: #00ff84; }
+    .wm-url {
+      font-family: 'Rajdhani', sans-serif; font-size: 9px; font-weight: 700;
+      letter-spacing: 3px; color: rgba(210,255,232,.72);
+      white-space: nowrap; text-shadow: 0 1px 6px rgba(0,0,0,.9);
+      text-transform: uppercase;
+    }
+
+    /* Top join link */
+    .st-join-btn {
+      position: absolute; z-index: 120;
+      top: max(8px, env(safe-area-inset-top)); left: max(8px, env(safe-area-inset-left));
+      min-width: 104px; height: 32px; display: flex; align-items: center; justify-content: center;
+      color: #031008; background: #00ff84; border: 1px solid rgba(255,255,255,.25);
+      padding: 6px 10px; border-radius: 999px; text-align: center;
+      font-family: 'Rajdhani', sans-serif; font-size: 13px; font-weight: 700;
+      letter-spacing: .8px; text-decoration: none; box-shadow: 0 0 22px rgba(0,255,132,.35);
+    }
+    .st-join-btn:hover { background: #fff; color: #031008; }
+
+    /* Aspect ratio / fit control retained from original player */
+    .sp-fit-btn {
+      background: transparent !important; border: 0 !important; cursor: pointer !important;
+      padding: 0 7px !important; min-width: auto !important; height: 100%;
+      display: flex; justify-content: center; align-items: center;
+    }
+    .fit-pill {
+      font-family: 'Rajdhani', sans-serif; font-size: 11px; font-weight: 700;
+      padding: 3px 7px; border: 1px solid rgba(255,255,255,.4);
+      border-radius: 4px; line-height: 1; color: #fff; white-space: nowrap;
+    }
+    .sp-fit-btn.mode-fill .fit-pill,
+    .sp-fit-btn.mode-cover .fit-pill { border-color: #00ff84; color: #00ff84; }
+
+    #status {
+      position: absolute; z-index: 130; right: 16px;
+      top: max(16px, env(safe-area-inset-top));
+      background: rgba(3,18,10,.88); color: #eafff3;
+      border: 1px solid rgba(0,255,132,.2); border-radius: 20px;
+      padding: 6px 12px; font: 600 12px 'Rajdhani', sans-serif;
+      opacity: 0; pointer-events: none; transition: opacity .2s;
+    }
+    #status.show { opacity: 1; }
+    #status.error { color: #ffb1b1; border-color: rgba(248,113,113,.4); }
+
+    @media (max-width: 600px) {
+      #wm { bottom: 62px; gap: 7px; }
+      .wm-name { font-size: 14px; letter-spacing: 3px; }
+      .wm-url { font-size: 8px; letter-spacing: 2px; }
+      .wm-rule { width: 16px; }
+      .st-join-btn { height: 30px; min-width: 94px; font-size: 12px; }
+      .fit-pill { font-size: 10px; padding: 2px 5px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shaka-video-container" id="player-container">
+    <video id="video" autoplay muted playsinline preload="metadata"></video>
+
+    <div id="wm" aria-hidden="true">
+      <div class="wm-rule"></div>
+      <div class="wm-inner">
+        <div class="wm-name">SPORTS<span class="r">TRACK</span></div>
+        <div class="wm-url">sportstrack.me</div>
+      </div>
+      <div class="wm-rule r"></div>
+    </div>
+
+    <!-- Replace YOUR_CHANNEL_ID with your real WhatsApp channel ID. -->
+    <a href="https://whatsapp.com/channel/YOUR_CHANNEL_ID" target="_blank" rel="noopener noreferrer" class="st-join-btn">Join Us</a>
+    <div id="status" role="status" aria-live="polite"></div>
+  </div>
+
+  <script>
+    (() => {
+      'use strict';
+
+      // Original stream information and cookie endpoint retained.
+      const CONFIG = {
+        streamUrl: 'https://jiotvmblive.cdn.jio.com/bpk-tv/Ten_2_MOB/WDVLive/index.mpd',
+        keyId: '671ce7c8ccc95e0a95cba0d12831d12e',
+        key: '175d284c9647b6feb379e7c1650a4f82',
+        cookieUrl: 'https://allrounder2-0.pages.dev/api/Sony-3.json'
+      };
+
+      const video = document.getElementById('video');
+      const container = document.getElementById('player-container');
+      const wm = document.getElementById('wm');
+      const status = document.getElementById('status');
+      let statusTimer;
+      let wmTimer;
+
+      function showStatus(message, isError = false, duration = 0) {
+        status.textContent = message;
+        status.className = 'show' + (isError ? ' error' : '');
+        clearTimeout(statusTimer);
+        if (duration > 0) statusTimer = setTimeout(() => { status.className = ''; }, duration);
+      }
+
+      function injectFitButton() {
+        const panel = container.querySelector('.shaka-controls-button-panel');
+        if (!panel || panel.querySelector('.sp-fit-btn')) return Boolean(panel);
+
+        const modes = ['contain', 'fill', 'cover'];
+        const labels = { contain: 'Fit', fill: 'Fill', cover: 'Zoom' };
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'sp-fit-btn';
+        btn.setAttribute('aria-label', 'Change video fit mode');
+        btn.innerHTML = '<span class="fit-pill">Fit</span>';
+        const fullscreenBtn = panel.querySelector('.shaka-fullscreen-button');
+        if (fullscreenBtn) panel.insertBefore(btn, fullscreenBtn);
+        else panel.appendChild(btn);
+
+        let index = 0;
+        const gcd = (a, b) => b ? gcd(b, a % b) : a;
+        const ratioLabel = () => {
+          const w = video.videoWidth, h = video.videoHeight;
+          if (!w || !h) return 'Fit';
+          const ratio = w / h;
+          const common = { '16:9': 16 / 9, '4:3': 4 / 3, '21:9': 21 / 9, '1:1': 1, '9:16': 9 / 16 };
+          for (const [name, value] of Object.entries(common)) {
+            if (Math.abs(value - ratio) < .02) return name;
+          }
+          const d = gcd(w, h);
+          return (w / d <= 40 && h / d <= 40) ? `${w / d}:${h / d}` : `${ratio.toFixed(2)}:1`;
+        };
+        function applyFit() {
+          const mode = modes[index];
+          video.style.objectFit = mode; // Applying the actual fit mode (not merely a CSS class).
+          btn.className = 'sp-fit-btn' + (mode === 'contain' ? '' : ' mode-' + mode);
+          btn.title = 'Video Fit: ' + labels[mode];
+          btn.querySelector('.fit-pill').textContent = mode === 'contain' ? ratioLabel() : labels[mode];
+        }
+        btn.addEventListener('click', (event) => {
+          event.stopPropagation();
+          index = (index + 1) % modes.length;
+          applyFit();
+        });
+        video.addEventListener('loadedmetadata', applyFit);
+        video.addEventListener('resize', applyFit);
+        applyFit();
+        return true;
+      }
+
+      function handleFullscreenChange() {
+        const fullscreenEl = document.fullscreenElement || document.webkitFullscreenElement;
+        if (fullscreenEl && !fullscreenEl.contains(wm)) fullscreenEl.appendChild(wm);
+        else if (!fullscreenEl && wm.parentElement !== container) container.appendChild(wm);
+        wm.style.bottom = fullscreenEl ? '74px' : '';
+      }
+
+      function refreshWatermark() {
+        wm.style.opacity = '.55';
+        clearTimeout(wmTimer);
+        wmTimer = setTimeout(() => {
+          if (!video.paused) wm.style.opacity = '.30';
+        }, 3000);
+      }
+
+      async function initPlayer() {
+        if (!window.shaka) {
+          showStatus('Player library unavailable', true);
+          return;
+        }
+        shaka.polyfill.installAll();
+        if (!shaka.Player.isBrowserSupported()) {
+          showStatus('Browser does not support playback', true);
+          return;
+        }
+
+        const player = new shaka.Player();
+        await player.attach(video);
+        const ui = new shaka.ui.Overlay(player, container, video);
+        ui.configure({
+          addBigPlayButton: true,
+          controlPanelElements: [
+            'play_pause', 'mute', 'volume', 'time_and_duration',
+            'spacer', 'language', 'captions', 'picture_in_picture',
+            'quality', 'fullscreen'
+          ],
+          seekBarColors: {
+            base: 'rgba(255,255,255,.32)',
+            buffered: 'rgba(255,255,255,.55)',
+            played: '#00ff84'
+          }
+        });
+
+        // Keep the watermark on top of the controls backdrop.
+        container.appendChild(wm);
+        for (let attempt = 0; attempt < 5 && !injectFitButton(); attempt++) {
+          await new Promise(resolve => setTimeout(resolve, 150));
+        }
+
+        player.configure({
+          drm: { clearKeys: { [CONFIG.keyId]: CONFIG.key } },
+          manifest: { defaultPresentationDelay: 5 },
+          streaming: {
+            lowLatencyMode: true,
+            bufferingGoal: 10,
+            rebufferingGoal: 2,
+            safeSeekOffset: 5
+          }
+        });
+
+        // An authorized __hdnea__ token can be passed in URLs. Browsers forbid
+        // scripts from setting Cookie, User-Agent and Referer request headers.
+        let cookieValue = '';
+        try {
+          const response = await fetch(CONFIG.cookieUrl, { cache: 'no-store' });
+          if (!response.ok) throw new Error('Cookie endpoint HTTP ' + response.status);
+          const data = await response.json();
+          cookieValue = (typeof data.cookie === 'string' ? data.cookie : '').trim();
+        } catch (error) {
+          console.warn('Token fetch failed; trying the stream without it:', error);
+        }
+        const tokenMatch = cookieValue.match(/(?:^|;\s*)__hdnea__=([^;]+)/);
+        const token = tokenMatch ? tokenMatch[1] : (cookieValue && !cookieValue.includes('=') ? cookieValue : '');
+        if (token) {
+          player.getNetworkingEngine().registerRequestFilter((type, request) => {
+            const kinds = shaka.net.NetworkingEngine.RequestType;
+            if (type !== kinds.MANIFEST && type !== kinds.SEGMENT) return;
+            request.uris = request.uris.map(uri => {
+              if (uri.includes('__hdnea__=')) return uri;
+              return uri + (uri.includes('?') ? '&' : '?') + '__hdnea__=' + encodeURIComponent(token);
+            });
+          });
+        }
+
+        player.addEventListener('error', (event) => {
+          const error = event.detail;
+          console.error('Shaka playback error:', error);
+          showStatus(`Stream error${error && error.code ? ' (' + error.code + ')' : ''}`, true, 7000);
+        });
+
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        video.addEventListener('playing', refreshWatermark);
+        video.addEventListener('pause', refreshWatermark);
+        container.addEventListener('mousemove', refreshWatermark);
+        container.addEventListener('touchstart', refreshWatermark, { passive: true });
+        container.addEventListener('pointerdown', () => { video.muted = false; }, { once: true, capture: true });
+
+        try {
+          showStatus('Loading live stream…');
+          await player.load(CONFIG.streamUrl);
+          showStatus('Live', false, 2800);
+          await video.play();
+        } catch (error) {
+          console.error('Player load/play failed:', error);
+          // A blocked play() can be retried via the Shaka play button.
+          if (error && error.name === 'NotAllowedError') {
+            showStatus('Tap play to start', false, 4500);
+          } else {
+            showStatus('Unable to load stream' + (error && error.code ? ` (${error.code})` : ''), true);
+          }
+        }
+      }
+
+      document.addEventListener('DOMContentLoaded', () => {
+        initPlayer().catch(error => {
+          console.error('Unexpected player error:', error);
+          showStatus('Player initialization failed', true);
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
